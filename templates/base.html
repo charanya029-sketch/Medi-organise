@@ -1,0 +1,118 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI-Powered Patient Medical Record System{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom Healthcare Styling -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="navbar navbar-expand-lg navbar-dark bg-dark py-2 px-3 shadow-sm border-bottom border-secondary">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.index') }}">
+                <i class="bi bi-heart-pulse-fill text-info fs-4"></i>
+                <span class="fw-bold tracking-tight">MedRecord AI</span>
+                <span class="badge bg-secondary text-uppercase ms-1" style="font-size: 0.65rem;">Clinical Record Organizer</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-light d-none d-md-inline" style="font-size: 0.85rem;">
+                    <i class="bi bi-shield-check text-success me-1"></i> Reference-Range Compliant Engine
+                </span>
+                <a href="{{ url_for('reports.upload_report') }}" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Upload Report
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Top Medical Notice Banner -->
+    <div class="bg-light border-bottom py-1 px-3 text-center" style="font-size: 0.75rem; color: #475569;">
+        <i class="bi bi-info-circle text-primary me-1"></i>
+        <strong>Informational System Only:</strong> Strictly for organizing & summarizing medical records. Does not provide medical diagnosis, disease prediction, or prescriptions.
+    </div>
+
+    <!-- Main Container -->
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="text-uppercase text-muted px-3 mb-2" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;">
+                Navigation
+            </div>
+            <a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('patients.list_patients') }}" class="nav-link {% if 'patients' in request.endpoint and 'history' not in request.endpoint %}active{% endif %}">
+                <i class="bi bi-people-fill"></i>
+                <span>Patients</span>
+            </a>
+            <a href="{{ url_for('reports.upload_report') }}" class="nav-link {% if 'reports' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-file-earmark-arrow-up-fill"></i>
+                <span>Upload Report</span>
+            </a>
+            <hr class="my-3 text-secondary">
+            <div class="text-uppercase text-muted px-3 mb-2" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;">
+                Safety & Privacy
+            </div>
+            <div class="px-3 text-muted" style="font-size: 0.75rem;">
+                <p class="mb-2"><i class="bi bi-lock-fill text-secondary me-1"></i> Local DB Storage</p>
+                <p class="mb-2"><i class="bi bi-check-circle-fill text-secondary me-1"></i> Report-Provided Ranges Only</p>
+                <p class="mb-0"><i class="bi bi-eye-slash-fill text-secondary me-1"></i> No PII Leaks</p>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="main-content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% if custom_error %}
+                <div class="alert alert-danger shadow-sm my-4 text-center">
+                    <h4><i class="bi bi-exclamation-triangle-fill me-2"></i> Notice</h4>
+                    <p class="mb-0">{{ custom_error }}</p>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-danger btn-sm mt-3">Return to Dashboard</a>
+                </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-top py-3 text-center text-muted" style="font-size: 0.8rem;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-md-start mb-2 mb-md-0">
+                    &copy; 2026 AI-Powered Patient Medical Record Organization and Summarization System
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <span class="badge bg-light text-secondary border">Accuracy & Traceability Guaranteed</span>
+                </div>
+            </div>
+            <div class="mt-2 text-muted" style="font-size: 0.72rem;">
+                <strong>Disclaimer:</strong> This application is an administrative organization and summarization tool. It is NOT a diagnostic medical device and does NOT offer medical advice, disease detection, or treatment prescriptions. Always consult a qualified healthcare provider for clinical decisions.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

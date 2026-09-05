@@ -1,0 +1,153 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Verify Report Findings | Medical Record System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h3 class="fw-bold text-dark mb-0">Report Verification &amp; Audit</h3>
+                <span class="badge bg-warning text-dark border border-warning-subtle">Verification Required</span>
+            </div>
+            <p class="text-muted small mb-0">
+                Compare the OCR/AI extracted laboratory items with the source document below. You may correct any values before committing them to the patient's record.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('patients.patient_profile', patient_id=patient.patient_id) }}" class="btn btn-outline-secondary btn-sm">
+                Cancel &amp; Return to Profile
+            </a>
+        </div>
+    </div>
+
+    <!-- Verification Split Screen (Section 25) -->
+    <form method="POST" action="{{ url_for('reports.confirm_report', report_id=report.id) }}">
+        <div class="row g-3">
+            <!-- Left Column: Original Report Viewer -->
+            <div class="col-lg-5">
+                <div class="card-custom bg-white p-3 h-100 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <div class="fw-bold text-dark small">
+                            <i class="bi bi-file-earmark-image text-primary me-1"></i> Source Document Viewer
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" id="zoomOutBtn" title="Zoom Out"><i class="bi bi-zoom-out"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="resetZoomBtn" title="Reset Zoom"><i class="bi bi-arrows-angle-contract"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="zoomInBtn" title="Zoom In"><i class="bi bi-zoom-in"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Image Display Box -->
+                    <div class="report-image-wrapper border rounded" style="max-height: 650px; overflow: auto; background-color: #1e293b;">
+                        {% set file_ext = report.file_name.rsplit('.', 1)[1].lower() if '.' in report.file_name else '' %}
+                        {% if file_ext == 'pdf' and report.preprocessed_path %}
+                            <!-- Show converted preprocessed first page image for PDF -->
+                            <img src="{{ url_for('reports.serve_upload', filename=report.preprocessed_path.replace('\\', '/').split('uploads/')[-1]) }}" id="reportViewerImg" class="img-fluid" alt="Medical Document Scan">
+                        {% else %}
+                            <img src="{{ url_for('reports.serve_upload', filename=report.file_path.replace('\\', '/').split('uploads/')[-1]) }}" id="reportViewerImg" class="img-fluid" alt="Medical Document Scan">
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-2 text-muted small d-flex justify-content-between">
+                        <span>Original: <strong>{{ report.file_name }}</strong></span>
+                        <a href="{{ url_for('reports.serve_upload', filename=report.file_path.replace('\\', '/').split('uploads/')[-1]) }}" target="_blank" class="text-decoration-none">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Open Raw File
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Extracted Findings Table -->
+            <div class="col-lg-7">
+                <div class="card-custom bg-white p-3 h-100 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <div class="fw-bold text-dark small">
+                            <i class="bi bi-check2-square text-success me-1"></i> Extracted Laboratory Findings ({{ lab_results|length }} tests)
+                        </div>
+                        <span class="badge bg-light text-muted border small">Editable Fields</span>
+                    </div>
+
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i> <strong>Numeric Accuracy Rule:</strong> Numbers are evaluated <em>only</em> against reference ranges found in the report. If a value was misread by OCR (e.g. decimal dot missed), correct it in the value column.
+                    </div>
+
+                    <div class="table-responsive flex-grow-1" style="max-height: 520px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0" id="verifyTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width: 25%;">Test Name</th>
+                                    <th style="width: 20%;">Extracted Value</th>
+                                    <th style="width: 15%;">Unit</th>
+                                    <th style="width: 20%;">Report Range</th>
+                                    <th style="width: 10%;">Confidence</th>
+                                    <th style="width: 10%;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if lab_results %}
+                                    {% for lab in lab_results %}
+                                        <tr class="{% if lab.verification_required %}table-warning{% endif %}">
+                                            <td>
+                                                <input type="text" name="lab_{{ lab.id }}_test_name" class="form-control form-control-sm fw-bold" value="{{ lab.test_name }}">
+                                            </td>
+                                            <td>
+                                                <input type="text" name="lab_{{ lab.id }}_value" class="form-control form-control-sm font-monospace text-end" value="{{ lab.raw_value_str or lab.value }}">
+                                            </td>
+                                            <td>
+                                                <input type="text" name="lab_{{ lab.id }}_unit" class="form-control form-control-sm" value="{{ lab.unit or '' }}">
+                                            </td>
+                                            <td>
+                                                <input type="text" name="lab_{{ lab.id }}_reference_range" class="form-control form-control-sm" value="{{ lab.reference_range or '' }}">
+                                            </td>
+                                            <td class="text-center">
+                                                {% if lab.confidence == 'High' %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">High</span>
+                                                {% elif lab.confidence == 'Medium' %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Med</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Low</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="{{ lab.status|status_badge }}">
+                                                    {{ lab.status }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">
+                                            No laboratory test lines were recognized automatically. You may add tests or review raw OCR text.
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bottom Actions -->
+                    <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#rawOcrCollapse">
+                            <i class="bi bi-file-text me-1"></i> View Raw OCR Text
+                        </button>
+                        <button type="submit" class="btn btn-success px-4 fw-bold">
+                            <i class="bi bi-check-circle-fill me-2"></i> Confirm Information &amp; Save
+                        </button>
+                    </div>
+
+                    <!-- Raw OCR Collapsible -->
+                    <div class="collapse mt-3" id="rawOcrCollapse">
+                        <div class="card card-body bg-light small font-monospace" style="max-height: 200px; overflow-y: auto;">
+                            <strong>Raw OCR Text (Preserved for Auditability):</strong>
+                            <pre class="mb-0 mt-2">{{ report.raw_ocr_text }}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

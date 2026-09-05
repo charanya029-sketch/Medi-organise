@@ -1,0 +1,400 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ patient.name }} ({{ patient.patient_id }}) | Patient Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <!-- Profile Top Bar -->
+    <div class="card-custom bg-white p-4 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 bg-primary-subtle text-primary rounded-circle fs-3 fw-bold">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h3 class="fw-bold mb-0 text-dark">{{ patient.name }}</h3>
+                        <span class="badge bg-light text-primary border fs-6">{{ patient.patient_id }}</span>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        {% if patient.age %}<span><strong>Age:</strong> {{ patient.age }}</span> &bull; {% endif %}
+                        {% if patient.sex %}<span><strong>Sex:</strong> {{ patient.sex }}</span> &bull; {% endif %}
+                        <span><strong>Record Created:</strong> {{ patient.created_at.strftime('%Y-%m-%d') if patient.created_at else 'Recent' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editPatientModal">
+                    <i class="bi bi-pencil-square me-1"></i> Edit Details
+                </button>
+                <a href="{{ url_for('patients.patient_history', patient_id=patient.patient_id) }}" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-clock-history me-1"></i> Test History
+                </a>
+                <a href="{{ url_for('reports.upload_report', patient_id=patient.patient_id) }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-cloud-upload-fill me-1"></i> Upload Lab Report
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-semibold" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="bi bi-person-lines-fill me-1"></i> Patient Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" id="labs-tab" data-bs-toggle="tab" data-bs-target="#labs" type="button" role="tab">
+                <i class="bi bi-clipboard2-pulse-fill me-1"></i> Laboratory Results ({{ lab_results|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">
+                <i class="bi bi-file-earmark-medical-fill me-1"></i> Medical Reports ({{ reports|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline" type="button" role="tab">
+                <i class="bi bi-diagram-3-fill me-1"></i> Medical Timeline
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold text-primary" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
+                <i class="bi bi-stars me-1"></i> AI Summary
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content Panels -->
+    <div class="tab-content" id="profileTabsContent">
+        <!-- 1. Patient Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card-custom bg-white p-4 h-100">
+                        <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
+                            <i class="bi bi-info-circle text-primary me-2"></i> Clinical Profile
+                        </h5>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">CURRENT SYMPTOMS</label>
+                            <div class="p-2 bg-light rounded border mt-1">
+                                {{ patient.symptoms or 'None documented' }}
+                            </div>
+                            <span class="badge-provenance badge-user mt-1">Source: User Provided</span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">EXISTING MEDICAL CONDITIONS</label>
+                            <div class="p-2 bg-light rounded border mt-1">
+                                {{ patient.conditions or 'None documented' }}
+                            </div>
+                            <span class="badge-provenance badge-user mt-1">Source: User Provided</span>
+                        </div>
+                        <div class="mb-0">
+                            <label class="text-muted small fw-bold">ALLERGIES</label>
+                            <div class="p-2 bg-light rounded border mt-1 text-danger fw-semibold">
+                                {{ patient.allergies or 'No known allergies' }}
+                            </div>
+                            <span class="badge-provenance badge-user mt-1">Source: User Provided</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card-custom bg-white p-4 h-100">
+                        <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
+                            <i class="bi bi-capsule-pill text-info me-2"></i> Medications &amp; Notes
+                        </h5>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">CURRENT MEDICATIONS</label>
+                            <div class="p-2 bg-light rounded border mt-1">
+                                {{ patient.medications or 'None reported' }}
+                            </div>
+                            <span class="badge-provenance badge-user mt-1">Source: User Provided</span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted small fw-bold">ADDITIONAL CLINICAL NOTES</label>
+                            <div class="p-2 bg-light rounded border mt-1">
+                                {{ patient.additional_notes or 'No additional notes entered' }}
+                            </div>
+                            <span class="badge-provenance badge-user mt-1">Source: User Provided</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Laboratory Results Tab (Section 13: Structured Laboratory Table) -->
+        <div class="tab-pane fade" id="labs" role="tabpanel">
+            <div class="card-custom bg-white p-3 mb-3">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-6">
+                        <input type="text" id="labTableSearch" class="form-control form-control-sm" placeholder="Search tests (e.g. Glucose, Hemoglobin)...">
+                    </div>
+                    <div class="col-md-6 text-md-end text-muted small">
+                        <span class="me-2"><span class="badge-status badge-low me-1">LOW</span> Below report range</span>
+                        <span class="me-2"><span class="badge-status badge-normal me-1">NORMAL</span> Within range</span>
+                        <span class="me-2"><span class="badge-status badge-high me-1">HIGH</span> Above range</span>
+                        <span><span class="badge-status badge-verify me-1">VERIFY</span> Needs Check</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-custom bg-white p-3">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="labResultsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Test Name</th>
+                                <th class="text-end">Value</th>
+                                <th>Unit</th>
+                                <th>Report Reference Range</th>
+                                <th class="text-center">Status</th>
+                                <th>Source</th>
+                                <th>Recorded Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if lab_results %}
+                                {% for lab in lab_results %}
+                                    <tr>
+                                        <td class="fw-bold text-dark">{{ lab.test_name }}</td>
+                                        <td class="text-end font-monospace fw-semibold fs-6">
+                                            {{ lab.value if lab.value is not none else lab.raw_value_str }}
+                                        </td>
+                                        <td>{{ lab.unit }}</td>
+                                        <td>
+                                            {% if lab.reference_range and lab.reference_range != 'Not provided' %}
+                                                <code>{{ lab.reference_range }}</code>
+                                            {% else %}
+                                                <span class="text-muted small fst-italic">Not provided</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="{{ lab.status|status_badge }}">
+                                                {{ lab.status }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="{{ lab.source|source_badge }}">
+                                                {{ lab.source }}
+                                            </span>
+                                        </td>
+                                        <td class="text-muted small">
+                                            {{ lab.created_at.strftime('%Y-%m-%d') if lab.created_at else '' }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">
+                                        No laboratory results found for this patient.
+                                        <div class="mt-2">
+                                            <a href="{{ url_for('reports.upload_report', patient_id=patient.patient_id) }}" class="btn btn-outline-primary btn-sm">
+                                                Upload First Report
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Medical Reports Tab -->
+        <div class="tab-pane fade" id="reports" role="tabpanel">
+            <div class="card-custom bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Uploaded Medical Documents</h5>
+                    <a href="{{ url_for('reports.upload_report', patient_id=patient.patient_id) }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Upload New Report
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Document Name</th>
+                                <th>Type</th>
+                                <th>Report Date</th>
+                                <th>Extracted Tests</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if reports %}
+                                {% for r in reports %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold text-dark">{{ r.file_name }}</div>
+                                            <div class="text-muted small">Uploaded: {{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '' }}</div>
+                                        </td>
+                                        <td><span class="badge bg-light text-dark border">{{ r.report_type }}</span></td>
+                                        <td>{{ r.report_date or 'Not stated' }}</td>
+                                        <td>
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                                {{ r.lab_results|length }} tests
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if r.status == 'VERIFIED' %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Verified</span>
+                                            {% else %}
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Needs Verification</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('reports.verify_report', report_id=r.id) }}" class="btn btn-outline-primary btn-sm">
+                                                <i class="bi bi-search me-1"></i> Verify &amp; View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        No reports uploaded yet.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Medical Timeline Tab (Section 16) -->
+        <div class="tab-pane fade" id="timeline" role="tabpanel">
+            <div class="card-custom bg-white p-4">
+                <h5 class="fw-bold mb-4"><i class="bi bi-clock-history text-primary me-2"></i> Chronological Care Timeline</h5>
+                <div class="timeline">
+                    {% for ev in timeline_events %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h6 class="fw-bold mb-0 text-dark">{{ ev.title }}</h6>
+                                    <span class="badge {{ ev.badge_class }}">{{ ev.date }}</span>
+                                </div>
+                                <div class="text-secondary small mb-2">{{ ev.description }}</div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="{{ ev.source|source_badge }}">{{ ev.source }}</span>
+                                    {% if ev.report_id %}
+                                        <a href="{{ url_for('reports.verify_report', report_id=ev.report_id) }}" class="btn btn-sm btn-link p-0 text-decoration-none">
+                                            Open Document &rarr;
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. AI Summary Tab (Section 17) -->
+        <div class="tab-pane fade" id="summary" role="tabpanel">
+            <div class="card-custom bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-stars text-primary me-2"></i> AI-Powered Patient Summary</h5>
+                        <p class="text-muted small mb-0">Structured, patient-friendly organization strictly based on available records without diagnosis or speculation.</p>
+                    </div>
+                    <form method="POST" action="{{ url_for('patients.summarize_patient', patient_id=patient.patient_id) }}">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Generate / Refresh Summary
+                        </button>
+                    </form>
+                </div>
+
+                <div class="p-4 bg-light rounded-4 border">
+                    {% if latest_summary %}
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                            <span class="badge-provenance badge-ai">Source: {{ latest_summary.source }}</span>
+                            <span class="text-muted small">Generated: {{ latest_summary.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
+                        <div class="bg-white p-4 rounded-3 border shadow-xs" style="white-space: pre-line; line-height: 1.6;">
+                            {{ latest_summary.summary_text }}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-file-earmark-text fs-1 text-muted"></i>
+                            <h6 class="fw-bold text-dark mt-3">No Summary Generated Yet</h6>
+                            <p class="text-muted small">Click the button below to generate a concise, patient-friendly summary based strictly on this patient's registered data and lab reports.</p>
+                            <form method="POST" action="{{ url_for('patients.summarize_patient', patient_id=patient.patient_id) }}">
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="bi bi-stars me-1"></i> Generate Summary Now
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Patient Modal -->
+<div class="modal fade" id="editPatientModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('patients.edit_patient', patient_id=patient.patient_id) }}">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold">Edit Patient Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Patient ID</label>
+                            <input type="text" class="form-control bg-light" value="{{ patient.patient_id }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Full Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ patient.name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Age</label>
+                            <input type="number" name="age" class="form-control" value="{{ patient.age or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Sex</label>
+                            <select name="sex" class="form-select">
+                                <option value="Female" {% if patient.sex == 'Female' %}selected{% endif %}>Female</option>
+                                <option value="Male" {% if patient.sex == 'Male' %}selected{% endif %}>Male</option>
+                                <option value="Other" {% if patient.sex == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Current Symptoms</label>
+                            <input type="text" name="symptoms" class="form-control" value="{{ patient.symptoms or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Existing Conditions</label>
+                            <input type="text" name="conditions" class="form-control" value="{{ patient.conditions or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Allergies</label>
+                            <input type="text" name="allergies" class="form-control" value="{{ patient.allergies or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Medications</label>
+                            <input type="text" name="medications" class="form-control" value="{{ patient.medications or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Additional Notes</label>
+                            <textarea name="additional_notes" class="form-control" rows="2">{{ patient.additional_notes or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Update Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

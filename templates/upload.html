@@ -1,0 +1,148 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Upload Medical Report | Medical Record System{% endblock %}
+
+{% block content %}
+<div class="container py-2">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill mb-2 fw-semibold">
+                    Document Processing Pipeline
+                </span>
+                <h2 class="fw-bold text-dark">Upload Laboratory Report</h2>
+                <p class="text-muted small">
+                    Upload medical lab reports in image or PDF format. The system retains your original document untouched, applies OpenCV image preprocessing to enhance text clarity, runs OCR, and extracts structured test results for your verification.
+                </p>
+            </div>
+
+            <!-- Upload Card -->
+            <div class="card-custom bg-white p-4 p-md-5 mb-4 shadow-sm">
+                <form method="POST" action="{{ url_for('reports.upload_report') }}" enctype="multipart/form-data">
+                    <!-- Patient Selector -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Target Patient <span class="text-danger">*</span></label>
+                        {% if patients %}
+                            <select name="patient_id" class="form-select form-select-lg mb-2" required id="patientSelect">
+                                <option value="">-- Choose Patient --</option>
+                                {% for p in patients %}
+                                    <option value="{{ p.patient_id }}" {% if selected_pid == p.patient_id %}selected{% endif %}>
+                                        {{ p.name }} (ID: {{ p.patient_id }})
+                                    </option>
+                                {% endfor %}
+                                <option value="__new__">+ Register New Patient on the fly...</option>
+                            </select>
+                        {% else %}
+                            <div class="alert alert-warning small py-2">
+                                No registered patients yet. Enter a Patient ID below to create one automatically.
+                            </div>
+                        {% endif %}
+
+                        <!-- Quick Register Inputs (hidden by default if patients exist, shown if needed) -->
+                        <div id="newPatientFields" class="p-3 bg-light rounded border mt-2 {% if patients and not selected_pid == '__new__' %}d-none{% endif %}">
+                            <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-person-plus me-1"></i> Quick Patient Registration</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <input type="text" name="new_patient_id" id="newPatientId" class="form-control form-control-sm" placeholder="Patient ID (e.g. PT-2026-001)">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" name="new_patient_name" id="newPatientName" class="form-control form-control-sm" placeholder="Patient Full Name">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Report Type -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Report Type</label>
+                        <select name="report_type" class="form-select">
+                            <option value="Laboratory Report">Laboratory Report (CBC, Metabolic Panel, Lipid, etc.)</option>
+                            <option value="Prescription">Prescription</option>
+                            <option value="Clinical Progress Note">Clinical Progress Note</option>
+                            <option value="Diagnostic Summary">Diagnostic Summary</option>
+                        </select>
+                    </div>
+
+                    <!-- File Input Box -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Document (JPG, JPEG, PNG, or PDF) <span class="text-danger">*</span></label>
+                        <div class="p-4 border-2 border-dashed rounded-3 text-center bg-light" style="border: 2px dashed #cbd5e1;">
+                            <i class="bi bi-cloud-arrow-up fs-1 text-primary mb-2 d-block"></i>
+                            <input type="file" name="report_file" id="reportFile" class="form-control" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <div class="form-text small mt-2">Maximum file size: 16 MB. Supported: JPG, JPEG, PNG, PDF.</div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button with Processing Spinner -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg shadow-sm" id="uploadSubmitBtn">
+                            <i class="bi bi-gear-wide-connected me-2"></i> Upload &amp; Process Document
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Pipeline Visualizer Card -->
+            <div class="card-custom bg-white p-4">
+                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-cpu-fill text-primary me-2"></i> Automated Preprocessing Pipeline Overview</h6>
+                <div class="row g-2 text-center small text-muted">
+                    <div class="col-4 col-md-2 p-2 bg-light rounded border">
+                        <div class="fw-bold text-dark">1. Ingest</div>
+                        <div>Original Safe</div>
+                    </div>
+                    <div class="col-4 col-md-2 p-2 bg-light rounded border">
+                        <div class="fw-bold text-dark">2. Grayscale</div>
+                        <div>Luminance Map</div>
+                    </div>
+                    <div class="col-4 col-md-2 p-2 bg-light rounded border">
+                        <div class="fw-bold text-dark">3. Denoise</div>
+                        <div>Bilateral Filter</div>
+                    </div>
+                    <div class="col-4 col-md-2 p-2 bg-light rounded border">
+                        <div class="fw-bold text-dark">4. CLAHE</div>
+                        <div>Local Contrast</div>
+                    </div>
+                    <div class="col-4 col-md-2 p-2 bg-light rounded border">
+                        <div class="fw-bold text-dark">5. Deskew</div>
+                        <div>Hough Align</div>
+                    </div>
+                    <div class="col-4 col-md-2 p-2 bg-light rounded border">
+                        <div class="fw-bold text-dark">6. Multi-OCR</div>
+                        <div>Fidelity Check</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const patientSelect = document.getElementById("patientSelect");
+    const newFields = document.getElementById("newPatientFields");
+    const newIdInput = document.getElementById("newPatientId");
+    
+    if (patientSelect && newFields) {
+        patientSelect.addEventListener("change", function() {
+            if (this.value === "__new__") {
+                newFields.classList.remove("d-none");
+                if (newIdInput) newIdInput.setAttribute("required", "required");
+            } else {
+                newFields.classList.add("d-none");
+                if (newIdInput) newIdInput.removeAttribute("required");
+            }
+        });
+    }
+
+    const form = document.querySelector("form");
+    const btn = document.getElementById("uploadSubmitBtn");
+    if (form && btn) {
+        form.addEventListener("submit", () => {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Preprocessing & Extracting OCR Data...`;
+        });
+    }
+</script>
+{% endblock %}

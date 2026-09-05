@@ -1,0 +1,26 @@
+﻿# Environment variables
+.env
+
+# Database & Uploads
+instance/
+uploads/
+*.db
+*.sqlite
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
