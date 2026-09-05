@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 import pytest
 from app import create_app
 from config import TestingConfig
@@ -32,7 +33,7 @@ def test_full_report_upload_verify_summary_flow(client, app):
     assert resp.status_code == 200
 
     # 2. Upload Report using Sample Image
-    sample_path = r"C:\Users\chara\.gemini\antigravity\scratch\medical-record-ai\static\images\sample_reports\sample_cbc_report.png"
+    sample_path = Path(__file__).resolve().parent.parent / "static" / "images" / "sample_reports" / "sample_cbc_report.png"
     with open(sample_path, "rb") as f:
         file_bytes = f.read()
 

@@ -1,10 +1,10 @@
-﻿import pytest
+import pytest
 from pathlib import Path
 from services.image_preprocessing import preprocess_medical_image
 
 def test_preprocessing_pipeline(tmp_path):
     """Verifies that the OpenCV preprocessing pipeline executes all steps and saves artifacts."""
-    sample_img = Path(r"C:\Users\chara\.gemini\antigravity\scratch\medical-record-ai\static\images\sample_reports\sample_cbc_report.png")
+    sample_img = Path(__file__).resolve().parent.parent / "static" / "images" / "sample_reports" / "sample_cbc_report.png"
     assert sample_img.exists(), "Sample image must exist for testing"
 
     out_dir = tmp_path / "preprocessed_test"

@@ -1,19 +1,29 @@
-﻿import os
+import os
 from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
+IS_VERCEL = bool(os.environ.get("VERCEL"))
+
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "medical-records-dev-key-change-in-prod-2026")
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", f"sqlite:///{BASE_DIR / 'instance' / 'database.db'}"
-    )
+    
+    # SQLite / Database path: use /tmp on Vercel if DATABASE_URL is not explicitly configured
+    if IS_VERCEL and "DATABASE_URL" not in os.environ:
+        SQLALCHEMY_DATABASE_URI = "sqlite:////tmp/database.db"
+    else:
+        SQLALCHEMY_DATABASE_URI = os.environ.get(
+            "DATABASE_URL", f"sqlite:///{BASE_DIR / 'instance' / 'database.db'}"
+        )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Uploads
-    UPLOAD_FOLDER = BASE_DIR / "uploads"
+    # Uploads: use /tmp/uploads on Vercel serverless functions
+    if IS_VERCEL:
+        UPLOAD_FOLDER = Path("/tmp/uploads")
+    else:
+        UPLOAD_FOLDER = BASE_DIR / "uploads"
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH_MB", 16)) * 1024 * 1024
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "pdf"}
     

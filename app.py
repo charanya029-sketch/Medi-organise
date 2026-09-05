@@ -1,4 +1,4 @@
-﻿import os
+import os
 from flask import Flask, render_template
 from config import Config
 from models import db
@@ -8,10 +8,17 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Ensure directories exist
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-    os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "preprocessed"), exist_ok=True)
-    os.makedirs(app.instance_path, exist_ok=True)
+    # Ensure directories exist (safely ignore OSError on read-only environments)
+    try:
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+        os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "preprocessed"), exist_ok=True)
+    except OSError:
+        pass
+
+    try:
+        os.makedirs(app.instance_path, exist_ok=True)
+    except OSError:
+        pass
 
     # Initialize extensions
     db.init_app(app)
@@ -67,11 +74,17 @@ def create_app(config_class=Config):
         return render_template("base.html", custom_error="The uploaded file exceeds the 16MB file size limit. Please upload a smaller document."), 413
 
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception:
+            pass
 
     return app
    
 
+
+# Top-level application instance for Vercel, WSGI, and deployment platforms
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
     app.run(host="127.0.0.1", port=5000, debug=True)
